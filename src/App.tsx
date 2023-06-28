@@ -1,13 +1,19 @@
+import { useState } from 'react';
 
+import Login from "./components/Login"
+import Dashboard from './pages/Dashboard';
 
 function App() {
 
+  const [token, setToken] = useState<string>('');
 
+  const handleLogin = (token: string) => {
+    setToken(token);
+  };
   return (
     <>
-       <h1 className="text-3xl font-bold underline">
-      Hello world!
-    </h1>
+     {token ? (<><Dashboard/></>) : ( <Login onLogin={handleLogin}/>)}
+   
     </>
   )
 }
