@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import LogoLogin from "../assets/login-logo.jpg"
+import Hero from "../assets/hero.webp"
 import Logo from "../assets/logo.png"
 
 interface LoginProps {
@@ -46,7 +46,7 @@ export default function Login({ onLogin }: LoginProps) {
     <div className='grid grid-cols-1 sm:grid-cols-2 h-screen w-full'>
       <div className='hidden sm:block  '>
     
-      <img className='w-full h-full object-cover ' src={LogoLogin} alt='' />
+      <img className='w-full h-full object-cover ' src={Hero} alt='' />
        
       </div>
 

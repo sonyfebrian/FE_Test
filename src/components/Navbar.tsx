@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Logo from "../assets/logo.png"
+import { Link } from 'react-router-dom';
 
 const NavBar: React.FC = () => {
   const [navbar, setNavbar] = useState(false);
@@ -56,12 +57,14 @@ const NavBar: React.FC = () => {
             }`}
           >
             <ul className="items-center justify-center space-y-8 md:flex md:space-x-6 md:space-y-0">
-              <li className="text-white hover:text-blue-600">
+              <Link to="/">  <li className="text-white hover:text-blue-600">
                 <span >Dashboard</span>
-              </li>
-              <li className="text-white hover:text-blue-600">
+              </li></Link>
+            
+              <Link to="/master-data"> <li className="text-white hover:text-blue-600">
               <span >Master Data</span>
-              </li>
+              </li></Link>
+             
               <li className="text-white hover:text-blue-600">
               <svg
       xmlns="http://www.w3.org/2000/svg"
