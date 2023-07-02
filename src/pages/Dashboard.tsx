@@ -1,57 +1,155 @@
-import React, { useRef, useEffect, useState, SetStateAction } from "react";
-import mapboxgl from "mapbox-gl";
+import React, { useRef, useEffect } from "react";
+import mapboxgl, { Map, LngLatBoundsLike } from 'mapbox-gl';
 import NavBar from "../components/Navbar";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 
 interface DashboardProps {
   token: string;
 }
 
-const ContactSection: React.FC <DashboardProps> = ({ token })  => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const [lng, setLng] = useState<number>(-70.9);
-  const [lat, setLat] = useState<number>(42.35);
-  const [zoom, setZoom] = useState<number>(9);
+interface Ruas {
+  id: string;
+  geometry: {
+    type: string;
+    coordinates: number[][];
+  };
+
+}
+
+interface RuasResponse {
+  data: Ruas[];
+}
+
+const ContactSection: React.FC<DashboardProps> = ({ token }) => {
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<Map | null>(null);
+  const drawRef = useRef<MapboxDraw | null>(null);
 
   useEffect(() => {
-    mapboxgl.accessToken =
-      "pk.eyJ1IjoidWNoaWEiLCJhIjoiY2xqZjdobHU4MjIwajNmdGhiZWxpMW9zbCJ9.V1VhvZtwUVrdQ_YPpomVqg";
+    mapboxgl.accessToken = "pk.eyJ1IjoidWNoaWEiLCJhIjoiY2xqZjdobHU4MjIwajNmdGhiZWxpMW9zbCJ9.V1VhvZtwUVrdQ_YPpomVqg";
 
-    if (!map.current) {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current as HTMLDivElement,
-        style: "mapbox://styles/mapbox/streets-v12",
-        center: [lng, lat],
-        zoom: zoom,
+    if (mapContainerRef.current) {
+      mapRef.current = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [0, 0],
+        zoom: 1
       });
+
+      mapRef.current.on('load', async () => {
+        addDrawControl();
+        await loadRuasData();
+      });
+
+      mapRef.current.on('click', (e) => {
+        const coordinates = e.lngLat.toArray().join(',');
+        console.log('Selected coordinates:', coordinates);
+      });
+
+
     }
-  }, [lng, lat, zoom]);
 
-  useEffect(() => {
-    if (!map.current) return; // wait for map to initialize
+    const addDrawControl = () => {
+      drawRef.current = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {
+          line_string: true,
+          trash: true
+        }
+      });
 
-    const handleMove = () => {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const center = map.current!.getCenter();
-      setLng(center.lng.toFixed(4) as unknown as SetStateAction<number>);
-      setLat(center.lat.toFixed(4) as unknown as SetStateAction<number>);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      setZoom(map.current!.getZoom().toFixed(2) as unknown as SetStateAction<number>);
+      mapRef.current?.addControl(drawRef.current);
+      mapRef.current?.on('draw.create', handleDrawCreate);
     };
 
-    map.current.on("move", handleMove);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleDrawCreate = (e: any) => {
+      const { features } = e;
+      if (features.length > 0) {
+        const feature = features[0];
+        console.log('Drawn feature:', feature);
+      }
+    };
+
+    const loadRuasData = async () => {
+      try {
+        const response = await fetch('http://34.101.145.49:3001/api/master-data/ruas/?page=1&per_page=10', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        const data: RuasResponse = await response.json();
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const geojson: any = {
+          type: 'FeatureCollection',
+          features: data.data.map((ruas: Ruas) => ({
+            type: 'Feature',
+            properties: {
+              id: ruas.id
+            },
+            geometry: {
+              // type: ruas.geometry.type,
+              coordinates: ruas
+            }
+          }))
+        };
+        console.log(geojson.features, "fetaures")
+        if (mapRef.current) {
+          const bounds = getBounds(geojson);
+          mapRef.current.fitBounds(bounds, { padding: 20 });
+
+          if (!mapRef.current.getSource('ruas')) {
+            mapRef.current.addSource('ruas', {
+              type: 'geojson',
+              data: geojson
+            });
+
+            mapRef.current.addLayer({
+              id: 'ruas',
+              type: 'line',
+              source: 'ruas',
+              paint: {
+                'line-color': '#FF0000',
+                'line-width': 2
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load ruas data:', error);
+      }
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const getBounds = (geojson: any): LngLatBoundsLike => {
+      const bounds = new mapboxgl.LngLatBounds();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      geojson.features.forEach((feature: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        feature.geometry.coordinates.forEach((coordinate: any) => {
+          bounds.extend(coordinate);
+        });
+      });
+      return bounds;
+    };
+
 
     return () => {
-      map.current?.off("move", handleMove);
+      if (mapRef.current) {
+        mapRef.current.remove();
+      }
     };
-  }, []);
-
+  }, [token]);
   return (
-    <> <NavBar /><section className="text-gray-600 body-font relative">
-    <div id="map" className="absolute inset-0 w-full h-full" />
-    <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
-  </section></>
-   
+    <>
+      <NavBar />
+
+      <div ref={mapContainerRef} className="w-full flex flex-col h-screen content-center justify-center"></div>
+
+    </>
+
   );
 };
 

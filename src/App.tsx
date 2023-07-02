@@ -16,13 +16,16 @@ function App() {
       {token ? (
         <>
           <Routes>
-            <Route path="/" element={<Dashboard token={token} />} />
-            <Route path="/master-data" element={<MasterData  />} />
+
+            <Route path="/dashboard" element={<Dashboard token={token} />} />
+            <Route path="/master-data" element={<MasterData token={token} />} />
           </Routes>
         </>
       ) : (
         <Login onLogin={handleLogin} />
       )}
+
+
     </>
   );
 }

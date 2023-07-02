@@ -1,8 +1,18 @@
+import React from 'react';
 
 import NavBar from '../components/Navbar'
+import Tabel from '../components/Tabel'
+interface TokenProps {
+  token: string;
+}
 
-export default function MasterData() {
+const MasterData: React.FC<TokenProps> = ({ token }) => {
+
   return (
-    <><NavBar /></>
+    <><NavBar token={token} />
+      <Tabel token={token} />
+    </>
   )
 }
+
+export default MasterData;
