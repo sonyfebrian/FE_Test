@@ -1,22 +1,17 @@
 import React, { useState } from "react";
 import Logo from "../assets/logo.png";
 import { Link } from 'react-router-dom';
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { TokenProps, } from '../types/types';
 
-const NavBar: React.FC<TokenProps> = ({ token }) => {
+
+
+
+interface DashboardProps {
+  onLogout: () => void;
+}
+const NavBar: React.FC<DashboardProps> = ({ onLogout }) => {
   const [navbar, setNavbar] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const navigate = useNavigate();
-  const handleLogout = async () => {
-    await axios.post("http://34.101.145.49:3002/api/logout", {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    navigate("/");
-  };
+
 
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
@@ -108,7 +103,7 @@ const NavBar: React.FC<TokenProps> = ({ token }) => {
                       <li className="px-4 py-2 hover:bg-gray-100">
                         <button
                           className="w-full text-black text-left"
-                          onClick={handleLogout}
+                          onClick={onLogout}
                         >
                           Logout
                         </button>

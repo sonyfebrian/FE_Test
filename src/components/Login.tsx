@@ -22,9 +22,13 @@ export default function Login({ onLogin }: LoginProps) {
         password,
       });
       const loggedInToken = response.data.access_token;
-      navigate("/dashboard");
+      localStorage.setItem('token', loggedInToken);
       setToken(loggedInToken);
       onLogin(token);
+
+      if (token) {
+        navigate("/dashboard");
+      }
 
 
     } catch (error) {

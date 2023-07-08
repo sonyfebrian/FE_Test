@@ -1,10 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useRef, useEffect } from 'react';
 import mapboxgl, { Map } from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 
-const Mapbox: React.FC = () => {
+interface MapboxProps {
+  onCoordinateCreate: (newCoordinate: any) => void;
+}
+
+const Mapbox: React.FC<MapboxProps> = ({ onCoordinateCreate }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -27,6 +32,7 @@ const Mapbox: React.FC = () => {
       mapRef.current.on('click', (e) => {
         const coordinates = e.lngLat.toArray().join(',');
         console.log('Selected coordinates:', coordinates);
+        onCoordinateCreate(e.lngLat.toArray());
       });
     }
 
@@ -35,6 +41,7 @@ const Mapbox: React.FC = () => {
         mapRef.current.remove();
       }
     };
+
   }, []);
 
   const addDrawControl = () => {
@@ -43,7 +50,8 @@ const Mapbox: React.FC = () => {
       controls: {
         line_string: true,
         trash: true
-      }
+      },
+
     });
 
     mapRef.current?.addControl(drawRef.current);
@@ -59,7 +67,7 @@ const Mapbox: React.FC = () => {
   };
 
 
-  return <div ref={mapContainerRef} style={{ height: '400px' }}></div>;
+  return <div ref={mapContainerRef} style={{ height: '400px' }}  ></div>;
 };
 
 export default Mapbox;

@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, } from 'react';
 import axios from 'axios';
-import { TokenProps, RuasData, RuasResponse } from '../types/types';
+import { RuasData, RuasResponse } from '../types/types';
 import Modal from 'react-modal';
 import Select from 'react-select';
 import Mapbox from './Map';
+
 import Swal from 'sweetalert2'
 
 Modal.setAppElement('#root');
@@ -14,7 +15,8 @@ interface Option {
 }
 
 
-const Tabel: React.FC<TokenProps> = ({ token }) => {
+
+const Tabel: React.FC = () => {
   const [ruasData, setRuasData] = useState<RuasData[]>([]);
   const [selectedUnit, setSelectedUnit] = useState<number>();
   const [ruas, setRuas] = useState<string>('');
@@ -24,10 +26,27 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
   const [status, setStatus] = useState<boolean>(false);
   const [modalIsOpen, setModalIsOpen] = useState<boolean>(false);
   const [updateRuasId, setUpdateRuasId] = useState<number | null>(null);
+  const [editRowData, setEditRowData] = useState<RuasData | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
 
+  const tokens = localStorage.getItem('token');
+  console.log(ruasData, "update")
+  console.log(editRowData, "initial value edit")
+  const [searchTerm, setSearchTerm] = useState('');
   const [options, setOptions] = useState<Option[]>([]);
   const [selectedOption, setSelectedOption] = useState<Option | null>(null);
-  const [editRowData, setEditRowData] = useState<RuasData | null>(null);
+  type Coordinate = string;
+  const [coordinatesss, setCoordinatesss] = useState<Coordinate[]>([]);
+
+  const handleCoordinateUpdate = (newCoordinate: Coordinate) => {
+    const coordinatesString = JSON.stringify(newCoordinate);
+    setCoordinatesss((prevCoordinates) => [...prevCoordinates, coordinatesString]);
+  };
+
+
+  console.log(coordinatesss, "new map")
 
 
   //unit 
@@ -36,7 +55,7 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
       try {
         const response = await axios.get('http://34.101.145.49:3001/api/master-data/unit', {
           headers: {
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${tokens}`
           }
         });
 
@@ -53,31 +72,15 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
 
     fetchUnitOptions();
 
-  }, [token]);
+  }, [tokens]);
 
 
 
   const handleDelete = async (rowId: number) => {
+    const rowData = ruasData.find((item) => item.id === rowId);
+    setEditRowData(rowData || null);
     try {
-      const response = await axios.put(
-        `http://34.101.145.49:3001/api/master-data/ruas/${rowId}`,
-        {
-          unit_id: "40000873",
-          ruas: "Jakarta Bogor Ciawi - Update",
-          long: "4233",
-          km_awal: "0+000",
-          km_akhir: "42+3002323",
-          status: 0,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      console.log('Delete ruas response:', response.data);
-
-      Swal.fire({
+      const result = await Swal.fire({
         title: 'Are you sure?',
         text: "You won't be able to revert this!",
         icon: 'warning',
@@ -85,57 +88,66 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
         confirmButtonText: 'Yes, delete it!'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          Swal.fire(
-            'Deleted!',
-            'Your file has been deleted.',
-            'success'
-          )
-        }
-      })
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
+      });
 
-      axios.get<RuasResponse>('http://34.101.145.49:3001/api/master-data/ruas', config)
-        .then(response => {
-          setRuasData(response.data.data);
+      if (result.isConfirmed) {
+        const response = await axios.put(
+          `http://34.101.145.49:3001/api/master-data/ruas/${rowId}`,
+          {
+            unit_id: rowData?.unit_id,
+            ruas: rowData?.ruas,
+            long: rowData?.long,
+            km_awal: rowData?.km_awal,
+            km_akhir: rowData?.km_akhir,
+            status: 0,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${tokens}`,
+            },
+          }
+        );
 
-        })
-        .catch(error => {
-          console.error('Error:', error);
+        Swal.fire(
+          'Deleted!',
+          'Your file has been deleted.',
+          'success'
+        ).then(() => {
+
+          location.reload();
         });
+      } else {
+        Swal.fire(
+          'Cancelled',
+          'Your file is safe.',
+          'error'
+        );
+      }
     } catch (error) {
-      console.error('Error deleting ruas:', error);
+      // Tangani error jika terjadi
+      console.error(error);
     }
+
   };
 
   //data table
   useEffect(() => {
-
     const config = {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${tokens}`,
       },
     };
 
-    axios.get<RuasResponse>('http://34.101.145.49:3001/api/master-data/ruas', config)
+    axios.get<RuasResponse>(`http://34.101.145.49:3001/api/master-data/ruas?page=${currentPage}&per_page=10`, config)
       .then(response => {
         setRuasData(response.data.data);
-        const refreshDataInterval = setInterval(setRuasData, 5 * 60 * 1000);
+        setTotalPages(response.data.total);
 
-
-        return () => {
-          clearInterval(refreshDataInterval);
-        };
       })
       .catch(error => {
         console.error('Error:', error);
       });
-  }, [token]);
+  }, [tokens, currentPage]);
 
   const handleCreateRuas = async () => {
     const statusValue = status ? 1 : 0;
@@ -146,21 +158,34 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
       km_awal: kmAwal,
       km_akhir: kmAkhir,
       status: statusValue,
-      coordinates: 'YOUR_SELECTED_COORDINATES'
+      coordinates: coordinatesss
     };
+
+    console.log(payload, "create");
+
 
     try {
       const response = await axios.post('http://34.101.145.49:3001/api/master-data/ruas', payload, {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${tokens}`
         }
       });
       console.log(response)
+
+      // if (response.status === 200) {
+      //   const refreshDataInterval = setInterval(setRuasData, 5 * 60 * 1000);
+      //   clearInterval(refreshDataInterval); // Clear the previous interval
+      //   const newInterval = setInterval(setRuasData, 2000); // Set new interval
+      //   return () => {
+      //     clearInterval(newInterval); // Clear the interval on cleanup
+      //   };
+      // }
+
       if (updateRuasId) {
         // Update existing ruas
         const response = await axios.put(`http://34.101.145.49:3001/api/master-data/ruas/${updateRuasId}`, payload, {
           headers: {
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${tokens}`
           },
 
         });
@@ -175,7 +200,10 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
         text: 'Success insert data',
       });
       closeModal();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
+
+
       Swal.fire({
         icon: 'error',
         title: 'Error creating ruas',
@@ -192,8 +220,6 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
   const edit = (rowId: number) => {
     setModalIsOpen(true);
     setUpdateRuasId(rowId);
-
-
     const rowData = ruasData.find((item) => item.id === rowId);
     setEditRowData(rowData || null);
   };
@@ -203,7 +229,7 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
     setSelectedUnit(0);
     setRuas('');
     setLong(0);
-    setKmAwal('');
+
     setKmAkhir('');
     setStatus(false);
   };
@@ -215,6 +241,14 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
       console.log(option.id);
     }
   };
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
+  };
+
+  const filteredData = ruasData.filter((data) =>
+    data.ruas.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="overflow-x-auto">
       <div className="min-w-screen min-h-screen bg-gray-100 flex  justify-center bg-gray-100 font-sans overflow-hidden">
@@ -229,7 +263,8 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
               </div>
               <input
                 type="text"
-                id="table-search"
+                value={searchQuery}
+                onChange={handleSearchChange}
                 className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-80 pl-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                 placeholder="Search for items"
               />
@@ -243,6 +278,7 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
               <span>Tambah</span>
             </button></div>
           </div>
+
           <Modal
             isOpen={modalIsOpen}
             onRequestClose={closeModal}
@@ -251,15 +287,18 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
           >
             <div>
 
-              <h1 className="block text-center py-4 text-2xl font-bold text-gray-800 dark:text-white">Tambah Ruas</h1>
+              <h1 className="block text-center py-4 text-2xl font-bold text-gray-800 dark:text-white">{updateRuasId ? "Edit Ruas" : "Tambah Ruas"}</h1>
               <div className='flex flex-wrap -mx-3 mb-6'>
                 <div className='w-full md:w-1/2 px-3 mb-6 md:mb-0'>
                   <label htmlFor="ruas" className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" >Ruas:</label>
-                  <input type="text" id="ruas" value={ruas} onChange={(e) => setRuas(e.target.value)} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+                  <input type="text" name="ruas" value={ruas} onChange={(e) => setRuas(e.target.value)} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
                 </div>
                 <div className='w-full md:w-1/2 px-3 mb-6 md:mb-0'>
                   <label htmlFor="kmAwal" className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" >Km Awal:</label>
-                  <input type="text" id="kmAwal" value={kmAwal} onChange={(e) => setKmAwal(e.target.value)} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+                  <input type="text" name="km_awal" value={kmAwal || editRowData?.km_awal} onChange={(e) => {
+                    console.log(e.target.value); // Check if the event is triggered
+                    setKmAwal(e.target.value);
+                  }} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
                 </div>
               </div>
               <div className='flex flex-wrap -mx-3 mb-6'>
@@ -297,7 +336,7 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
               </div>
 
 
-              <Mapbox />
+              <Mapbox onCoordinateCreate={handleCoordinateUpdate} />
               <div className="flex justify-end ">
                 <div className="py-2 m-2">
                   <button onClick={closeModal} className="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded">
@@ -315,6 +354,7 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
 
           </Modal>
           <div className="bg-white shadow-md rounded">
+
             <table className="min-w-max w-full table-auto">
               <thead>
                 <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
@@ -326,7 +366,7 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
                 </tr>
               </thead>
               <tbody className="text-gray-600 text-sm font-light">
-                {ruasData.map((item, i) => (
+                {filteredData?.sort((a, b) => a.id - b.id).map((item, i) => (
                   <tr className="border-b border-gray-200 hover:bg-gray-100" key={i}>
                     <td className="py-3 px-6 text-left whitespace-nowrap" >
                       <div className="flex items-center">
@@ -361,9 +401,9 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
                           </svg>
 
                         </a>
-                        <a
-                          href="#"
-                          data-tooltip="Edite"
+                        <button
+
+
                           onClick={() => edit(item.id)}
                         // Add other necessary attributes
                         >
@@ -371,24 +411,52 @@ const Tabel: React.FC<TokenProps> = ({ token }) => {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                           </svg>
 
-                        </a>
-                        <a
-                          href="#"
-                          data-tooltip="Edite"
-                          // Add other necessary attributes
+                        </button>
+                        <button
+
                           onClick={() => handleDelete(item.id)}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                           </svg>
 
-                        </a>
+                        </button>
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+
+            <div className='p-3 flex justify-center'> <nav aria-label="Page navigation example">
+              <ul className="inline-flex -space-x-px text-sm">
+                <li>
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    className="flex items-center justify-center px-3 h-8 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                  >
+                    Previous
+                  </button>
+                </li>
+                <li>
+                  <span className="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">{currentPage}</span>
+                </li>
+                <li>
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    className="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                  >
+                    Next
+                  </button>
+                </li>
+
+              </ul>
+            </nav></div>
+
+
           </div>
         </div>
       </div>

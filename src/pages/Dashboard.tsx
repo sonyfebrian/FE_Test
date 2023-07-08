@@ -1,11 +1,14 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, } from "react";
 import mapboxgl, { Map, LngLatBoundsLike } from 'mapbox-gl';
 import NavBar from "../components/Navbar";
+import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
+import { useNavigate } from "react-router-dom";
 
 interface DashboardProps {
-  token: string;
+
+  onLogout: () => void;
 }
 
 interface Ruas {
@@ -21,9 +24,11 @@ interface RuasResponse {
   data: Ruas[];
 }
 
-const ContactSection: React.FC<DashboardProps> = ({ token }) => {
+const ContactSection: React.FC<DashboardProps> = () => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
+  const navigate = useNavigate();
+  const tokens = localStorage.getItem('token');
   const drawRef = useRef<MapboxDraw | null>(null);
 
   useEffect(() => {
@@ -76,7 +81,7 @@ const ContactSection: React.FC<DashboardProps> = ({ token }) => {
       try {
         const response = await fetch('http://34.101.145.49:3001/api/master-data/ruas/?page=1&per_page=10', {
           headers: {
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${tokens}`
           }
         });
         const data: RuasResponse = await response.json();
@@ -128,7 +133,7 @@ const ContactSection: React.FC<DashboardProps> = ({ token }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       geojson.features.forEach((feature: any) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        feature.geometry.coordinates.forEach((coordinate: any) => {
+        feature.geometry?.coordinates?.forEach((coordinate: any) => {
           bounds.extend(coordinate);
         });
       });
@@ -141,10 +146,16 @@ const ContactSection: React.FC<DashboardProps> = ({ token }) => {
         mapRef.current.remove();
       }
     };
-  }, [token]);
+  }, [tokens]);
+  const handleLogout = () => {
+
+
+    navigate("/");
+  };
+
   return (
     <>
-      <NavBar />
+      <NavBar onLogout={handleLogout} />
 
       <div ref={mapContainerRef} className="w-full flex flex-col h-screen content-center justify-center"></div>
 
