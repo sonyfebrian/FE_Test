@@ -25,6 +25,19 @@ const Mapbox: React.FC<MapboxProps> = ({ onCoordinateCreate }) => {
         zoom: 1
       });
 
+      const addDrawControl = () => {
+        drawRef.current = new MapboxDraw({
+          displayControlsDefault: false,
+          controls: {
+            line_string: true,
+            trash: true
+          },
+
+        });
+
+        mapRef.current?.addControl(drawRef.current);
+        mapRef.current?.on('draw.create', handleDrawCreate);
+      };
       mapRef.current.on('load', () => {
         addDrawControl();
       });
@@ -42,21 +55,8 @@ const Mapbox: React.FC<MapboxProps> = ({ onCoordinateCreate }) => {
       }
     };
 
-  }, []);
+  }, [onCoordinateCreate]);
 
-  const addDrawControl = () => {
-    drawRef.current = new MapboxDraw({
-      displayControlsDefault: false,
-      controls: {
-        line_string: true,
-        trash: true
-      },
-
-    });
-
-    mapRef.current?.addControl(drawRef.current);
-    mapRef.current?.on('draw.create', handleDrawCreate);
-  };
 
   const handleDrawCreate = (e: any) => {
     const { features } = e;

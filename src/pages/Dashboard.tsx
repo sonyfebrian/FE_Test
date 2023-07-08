@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, } from "react";
-import mapboxgl, { Map, LngLatBoundsLike } from 'mapbox-gl';
+import mapboxgl, { Map, } from 'mapbox-gl';
 import NavBar from "../components/Navbar";
 import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
@@ -101,44 +101,12 @@ const ContactSection: React.FC<DashboardProps> = () => {
           }))
         };
         console.log(geojson.features, "fetaures")
-        if (mapRef.current) {
-          const bounds = getBounds(geojson);
-          mapRef.current.fitBounds(bounds, { padding: 20 });
 
-          if (!mapRef.current.getSource('ruas')) {
-            mapRef.current.addSource('ruas', {
-              type: 'geojson',
-              data: geojson
-            });
-
-            mapRef.current.addLayer({
-              id: 'ruas',
-              type: 'line',
-              source: 'ruas',
-              paint: {
-                'line-color': '#FF0000',
-                'line-width': 2
-              }
-            });
-          }
-        }
       } catch (error) {
         console.error('Failed to load ruas data:', error);
       }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const getBounds = (geojson: any): LngLatBoundsLike => {
-      const bounds = new mapboxgl.LngLatBounds();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      geojson.features.forEach((feature: any) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        feature.geometry?.coordinates?.forEach((coordinate: any) => {
-          bounds.extend(coordinate);
-        });
-      });
-      return bounds;
-    };
 
 
     return () => {

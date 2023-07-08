@@ -32,9 +32,7 @@ const Tabel: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const tokens = localStorage.getItem('token');
-  console.log(ruasData, "update")
-  console.log(editRowData, "initial value edit")
-  const [searchTerm, setSearchTerm] = useState('');
+
   const [options, setOptions] = useState<Option[]>([]);
   const [selectedOption, setSelectedOption] = useState<Option | null>(null);
   type Coordinate = string;
@@ -101,13 +99,15 @@ const Tabel: React.FC = () => {
             km_akhir: rowData?.km_akhir,
             status: 0,
           },
+
+
           {
             headers: {
               Authorization: `Bearer ${tokens}`,
             },
           }
         );
-
+        console.log(response)
         Swal.fire(
           'Deleted!',
           'Your file has been deleted.',
